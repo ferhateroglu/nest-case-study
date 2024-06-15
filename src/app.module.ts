@@ -7,10 +7,12 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { BranchesModule } from './branches/branches.module';
 import { UsersModule } from './users/users.module';
+import { getEnvPath } from './utils/get-env-name';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
+      envFilePath: getEnvPath(),
       isGlobal: true,
     }),
     TypeOrmModule.forRootAsync({
