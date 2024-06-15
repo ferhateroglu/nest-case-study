@@ -2,41 +2,75 @@ import {
   Controller,
   Get,
   Post,
-  Body,
-  Patch,
-  Param,
+  Put,
   Delete,
+  Param,
+  Body,
+  ForbiddenException,
+  Req,
 } from '@nestjs/common';
 import { BranchesService } from './branches.service';
-import { CreateBranchDto } from './dto/create-branch.dto';
-import { UpdateBranchDto } from './dto/update-branch.dto';
+import { Branch } from './entities/branch.entity';
+import { UsersService } from '../users/users.service';
 
 @Controller('branches')
 export class BranchesController {
-  constructor(private readonly branchesService: BranchesService) {}
-
-  @Post()
-  create(@Body() createBranchDto: CreateBranchDto) {
-    return this.branchesService.create(createBranchDto);
-  }
+  constructor(
+    private readonly branchService: BranchesService,
+    private readonly userService: UsersService,
+  ) {}
 
   @Get()
-  findAll() {
-    return this.branchesService.findAll();
+  async findAll(@Req() req): Promise<Branch[]> {
+    const user = req.user;
+    if (this.userService.authorize(user, 'list')) {
+      return this.branchService.findAll();
+    } else {
+      throw new ForbiddenException('User not authorized to list branches');
+    }
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.branchesService.findOne(+id);
+  async findOne(@Param('id') id: number, @Req() req): Promise<Branch> {
+    const user = req.user;
+    if (this.userService.authorize(user, 'view')) {
+      return this.branchService.findOne(id);
+    } else {
+      throw new ForbiddenException('User not authorized to view branch');
+    }
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateBranchDto: UpdateBranchDto) {
-    return this.branchesService.update(+id, updateBranchDto);
+  @Post()
+  async create(@Body() branch: Branch, @Req() req): Promise<Branch> {
+    const user = req.user;
+    if (this.userService.authorize(user, 'create')) {
+      return this.branchService.create(branch);
+    } else {
+      throw new ForbiddenException('User not authorized to create branch');
+    }
+  }
+
+  @Put(':id')
+  async update(
+    @Param('id') id: number,
+    @Body() branch: Partial<Branch>,
+    @Req() req,
+  ): Promise<void> {
+    const user = req.user;
+    if (this.userService.authorize(user, 'update')) {
+      await this.branchService.update(id, branch);
+    } else {
+      throw new ForbiddenException('User not authorized to update branch');
+    }
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.branchesService.remove(+id);
+  async remove(@Param('id') id: number, @Req() req): Promise<void> {
+    const user = req.user;
+    if (this.userService.authorize(user, 'delete')) {
+      await this.branchService.remove(id);
+    } else {
+      throw new ForbiddenException('User not authorized to delete branch');
+    }
   }
 }

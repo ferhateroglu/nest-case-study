@@ -1,26 +1,58 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User, UserRole } from './entities/user.entity';
+
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+  constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+  ) {}
+
+  findAll(): Promise<User[]> {
+    return this.userRepository.find();
   }
 
-  findAll() {
-    return `This action returns all users`;
+  findOne(id: number): Promise<User> {
+    return this.userRepository.findOneBy({ id });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async create(user: CreateUserDto): Promise<User> {
+    const newUser = new User();
+    newUser.username = user.username;
+    newUser.password = user.password;
+    newUser.role = user.role;
+    return this.userRepository.save(newUser);
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async update(id: number, user: Partial<User>): Promise<void> {
+    await this.userRepository.update(id, user);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async remove(id: number): Promise<void> {
+    await this.userRepository.delete(id);
+  }
+
+  async authenticate(username: string, password: string): Promise<User> {
+    const user = await this.userRepository.findOneBy({ username });
+    if (user && user.password === password) {
+      return user;
+    }
+    return null;
+  }
+
+  authorize(user: User, action: string): boolean {
+    if (user.role === UserRole.OWNER) {
+      return true;
+    } else if (
+      user.role === UserRole.EMPLOYEE &&
+      ['view', 'list'].includes(action)
+    ) {
+      return true;
+    }
+    return false;
   }
 }
