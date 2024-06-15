@@ -5,18 +5,20 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService);
+  app.enableCors();
 
+  // Swagger Config
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Cats example')
-    .setDescription('The cats API description')
+    .setTitle('Branch Tracker API')
+    .setDescription('This is a case study API for Branch Tracker')
     .setVersion('1.0')
-    .addTag('cats')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('doc', app, document);
 
+  const configService = app.get(ConfigService);
   await app.listen(configService.get('PORT') || 3000);
 }
 bootstrap();
