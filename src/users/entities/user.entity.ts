@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import { UserBranch } from '../../users-branches/entities/user-branch.entity';
 
 export enum UserRole {
   OWNER = 'owner',
@@ -13,7 +14,7 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
+  @Column({ select: false })
   password: string;
 
   @Column({
@@ -22,4 +23,7 @@ export class User {
     default: UserRole.EMPLOYEE,
   })
   role: UserRole;
+
+  @OneToMany(() => UserBranch, (userBranch) => userBranch.user)
+  userBranches: UserBranch[];
 }

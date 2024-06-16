@@ -4,10 +4,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { getTypeOrmConfig } from './config/typeorm.config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AuthModule } from './auth/auth.module';
 import { BranchesModule } from './branches/branches.module';
 import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 import { getEnvPath } from './utils/get-env-name';
+import { UsersBranchesModule } from './users-branches/users-branches.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { getEnvPath } from './utils/get-env-name';
     AuthModule,
     BranchesModule,
     UsersModule,
+    UsersBranchesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

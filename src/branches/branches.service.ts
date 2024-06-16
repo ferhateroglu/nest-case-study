@@ -1,13 +1,20 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { CreateBranchDto } from './dto/create-branch.dto';
 import { Branch } from './entities/branch.entity';
+import { UserBranch } from 'src/users-branches/entities/user-branch.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class BranchesService {
   constructor(
     @InjectRepository(Branch)
     private branchRepository: Repository<Branch>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    @InjectRepository(UserBranch)
+    private userBranchRepository: Repository<UserBranch>,
   ) {}
 
   findAll(): Promise<Branch[]> {
@@ -22,12 +29,35 @@ export class BranchesService {
     return this.branchRepository.findOneBy({ name });
   }
 
-  async create(branch: Branch): Promise<Branch> {
-    const branchExists = await this.findByName(branch.name);
+  async create(createBranchDto: CreateBranchDto): Promise<any> {
+    const { owner_id, name: branchName } = createBranchDto;
+
+    // Check if the branch already exists
+    const branchExists = await this.branchRepository.findOne({
+      where: { name: branchName },
+    });
     if (branchExists) {
       throw new HttpException('Branch already exists', HttpStatus.BAD_REQUEST);
     }
-    return this.branchRepository.save(branch);
+
+    // Create a new Branch entity
+    const newBranch = this.branchRepository.create(createBranchDto);
+    await this.branchRepository.save(newBranch);
+
+    // Retrieve User entity
+    const user = await this.userRepository.findOneBy({ id: owner_id });
+
+    // Create a new UserBranch entity
+    const newUserBranch = new UserBranch();
+    newUserBranch.user = user; // Associate the retrieved User entity
+    newUserBranch.branch = newBranch; // Associate the saved Branch entity
+
+    // Save the new UserBranch entity
+    const savedUserBranch = await this.userBranchRepository.save(newUserBranch);
+
+    return {
+      savedUserBranch,
+    };
   }
 
   async update(id: number, branch: Partial<Branch>): Promise<Branch> {
@@ -45,5 +75,55 @@ export class BranchesService {
     }
 
     return { message: 'Branch deleted successfully', status: HttpStatus.OK };
+  }
+
+  async getBranchDetails(branchId: number): Promise<Branch> {
+    return await this.branchRepository
+      .createQueryBuilder('branch')
+      .leftJoinAndSelect('branch.userBranches', 'userBranch')
+      .leftJoinAndSelect('userBranch.user', 'user')
+      .where('branch.id = :id', { id: branchId })
+      .getOne();
+  }
+
+  async addUserToBranch(branchId: number, userId: number): Promise<any> {
+    const branch = await this.branchRepository.findOne({
+      where: { id: branchId },
+    });
+    if (!branch) {
+      throw new HttpException('Branch not found', HttpStatus.NOT_FOUND);
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+
+    // check if user is already in branch
+    const userBranchExists = await this.userBranchRepository
+      .createQueryBuilder('userBranch')
+      .where('userBranch.branch_id = :branchId', { branchId })
+      .andWhere('userBranch.user_id = :userId', { userId })
+      .getOne();
+
+    if (userBranchExists) {
+      throw new HttpException(
+        'User is already in branch',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const userBranch = new UserBranch();
+    userBranch.branch = branch;
+    userBranch.user = user;
+
+    await this.userBranchRepository.save(userBranch);
+
+    return {
+      message: 'User added to branch successfully',
+      status: HttpStatus.OK,
+    };
   }
 }

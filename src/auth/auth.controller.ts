@@ -1,42 +1,41 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Body, Controller, HttpStatus, Post, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { AuthenticateDto } from './dto/authenticate.dto';
+
+import { UsersService } from '../users/users.service';
+import { CreateUserDto } from '../users/dto/create-user.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly usersService: UsersService,
+  ) {}
 
-  @Post()
-  create(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.create(createAuthDto);
+  @Post('login')
+  async login(@Res() res, @Body() authenticateDto: AuthenticateDto) {
+    try {
+      const user = await this.usersService.checkUser(
+        authenticateDto.email,
+        authenticateDto.password,
+      );
+
+      const response = this.authService.authenticate(user);
+
+      return res.status(HttpStatus.OK).json({ data: response });
+    } catch (error) {
+      return res.status(error.status).json(error.response);
+    }
   }
 
-  @Get()
-  findAll() {
-    return this.authService.findAll();
-  }
+  @Post('register')
+  async register(@Res() res, @Body() user: CreateUserDto) {
+    try {
+      const response = await this.usersService.create(user);
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.authService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
-    return this.authService.update(+id, updateAuthDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.authService.remove(+id);
+      return res.status(HttpStatus.CREATED).json({ data: response });
+    } catch (error) {
+      return res.status(error.status).json(error.response);
+    }
   }
 }
