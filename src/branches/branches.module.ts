@@ -6,7 +6,7 @@ import { Branch } from './entities/branch.entity';
 // import user module
 import { UsersModule } from '../users/users.module';
 @Module({
-  imports: [TypeOrmModule.forFeature([Branch]), UsersModule],
+  imports: [UsersModule, TypeOrmModule.forFeature([Branch])],
   providers: [BranchesService],
   controllers: [BranchesController],
 })
