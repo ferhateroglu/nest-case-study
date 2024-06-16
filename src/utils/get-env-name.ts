@@ -2,7 +2,7 @@
 export const getEnvPath = () => {
   switch (process.env.NODE_ENV) {
     case 'production':
-      return '.production.env';
+      return '.env';
     default:
       return '.development.env';
   }

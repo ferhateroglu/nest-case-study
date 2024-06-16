@@ -17,3 +17,15 @@ services:
       - './docker/mysql8/data:/var/lib/mysql'
       - './docker/mysql8/my.cnf:/etc/mysql/conf.d/my.cnf'
       - './docker/mysql8/sql:/docker-entrypoint-initdb.d'
+
+  app:
+    container_name: nest-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - db
